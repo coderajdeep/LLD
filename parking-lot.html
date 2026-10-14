@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parking Lot LLD</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: single reading column, parking-signage accents (sign blue + line-paint yellow) on asphalt neutrals */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#1b2129; --muted:#5a6573; --line:#dde2e8;
+  --sign:#1f5fbf; --paint:#e8b400; --code-bg:#eef1f5; --good:#1f7a4d; --warn:#b35a00;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13171c; --surface:#1a1f26; --fg:#e4e8ee; --muted:#9aa5b3; --line:#2b323c;
+  --sign:#6ea2ff; --paint:#f2c94c; --code-bg:#0f1318; --good:#5fcf95; --warn:#f0a35a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13171c; --surface:#1a1f26; --fg:#e4e8ee; --muted:#9aa5b3; --line:#2b323c;
+  --sign:#6ea2ff; --paint:#f2c94c; --code-bg:#0f1318; --good:#5fcf95; --warn:#f0a35a; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:2.1rem}
+h2{font-size:1.45rem;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:22px;height:4px;background:var(--paint);border-radius:1px;flex:none}
+h3{font-size:1.1rem;margin-top:6px}
+p{margin:0;max-width:68ch}
+section{display:flex;flex-direction:column;gap:12px;min-width:0}
+a{color:var(--sign)}
+code{font-family:var(--f-mono);font-size:.86em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+ul,ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:5px;max-width:72ch}
+
+header{display:flex;gap:16px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:20px}
+.sign{flex:none;width:58px;height:58px;border-radius:8px;background:var(--sign);color:#fff;
+  font:700 2.4rem/58px var(--f-display);text-align:center;border:3px solid var(--surface);outline:2px solid var(--sign)}
+.meta{color:var(--muted);font-size:.92rem}
+.eyebrow{font:600 .74rem var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.box h3{margin:0}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.94rem;min-width:520px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .76rem var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+
+.code{position:relative;min-width:0}
+.code .bar{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--line);border-bottom:0;
+  border-radius:8px 8px 0 0;padding:6px 8px 6px 12px;font:600 .8rem var(--f-mono);color:var(--muted)}
+.code button{font:600 .76rem var(--f-body);color:var(--sign);background:transparent;border:1px solid var(--line);border-radius:5px;padding:3px 9px;cursor:pointer}
+.code button:focus-visible,summary:focus-visible{outline:2px solid var(--sign);outline-offset:2px}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:0 0 8px 8px;padding:14px;overflow-x:auto;
+  font:13px/1.55 var(--f-mono);tab-size:4}
+pre .k{color:var(--sign);font-weight:600} pre .c{color:var(--muted);font-style:italic} pre .s{color:var(--good)}
+
+.tip{border-left:4px solid var(--paint);background:var(--surface);padding:10px 14px;border-radius:0 6px 6px 0}
+.tag{display:inline-block;font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid currentColor}
+.tag.good{color:var(--good)} .tag.warn{color:var(--warn)} .tag.sign{color:var(--sign)}
+.flow{font-family:var(--f-mono);font-size:.88rem;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:8px}
+footer{color:var(--muted);font-size:.88rem;border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+
+<main>
+<header>
+  <div class="sign" aria-hidden="true">P</div>
+  <div>
+    <div class="eyebrow">Low Level Design · Medium</div>
+    <h1>Parking Lot LLD</h1>
+    <div class="meta">Interview notes from Hello Interview's breakdown, with Java code and my own suggestions.</div>
+  </div>
+</header>
+
+<section>
+  <h2>Problem</h2>
+  <p>Design a parking lot where vehicles of different types park. On entry the system assigns a compatible spot and issues a ticket. On exit it validates the ticket, charges by the hour (rounded up) and frees the spot.</p>
+</section>
+
+<section>
+  <h2>Requirements</h2>
+  <div class="grid2">
+    <div class="box">
+      <h3>In scope</h3>
+      <ul>
+        <li>3 vehicle types: Motorcycle, Car, Large</li>
+        <li>Auto-assign a compatible free spot on entry</li>
+        <li>Issue a ticket with a unique ID</li>
+        <li>Exit by ticket ID: validate, compute fee, free spot</li>
+        <li>Hourly rate, same for all, round up</li>
+        <li>Reject entry if no compatible spot</li>
+        <li>Reject exit if ticket invalid or already used</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Out of scope</h3>
+      <ul>
+        <li>Payment processing</li>
+        <li>Gates, cameras, display boards, UI</li>
+        <li>Reservations / pre-booking</li>
+        <li>Lost tickets</li>
+      </ul>
+      <p class="meta">Clarifying questions to ask: does the system assign spots? which vehicle types? how is pricing done? what if full / invalid ticket? lost ticket? what's out of scope?</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Entities</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Entity</th><th>Kind</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>ParkingLot</code></td><td>Orchestrator</td><td>Owns spots, occupancy and active tickets. The only public API: <code>enter()</code>, <code>exit()</code>.</td></tr>
+      <tr><td><code>ParkingSpot</code></td><td>Data</td><td>ID + <code>SpotType</code>. Intrinsic properties only. Does not know if it's occupied.</td></tr>
+      <tr><td><code>Ticket</code></td><td>Immutable record</td><td>ticketId, spotId, vehicleType, entryTime. No behavior.</td></tr>
+      <tr><td><code>VehicleType</code>, <code>SpotType</code></td><td>Enums</td><td>Kept separate even with the same values, so compatibility rules can diverge later.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tip"><b>Vehicle is not a class.</b> It's external to the system; we only need its type. Over-modeling Vehicle (with plate, color, etc.) is a common mid-level red flag.</div>
+</section>
+
+<section>
+  <h2>Key design decisions</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Where does occupancy live?</td><td>Orchestrator (<code>Set&lt;String&gt; occupiedSpotIds</code>)</td><td>Occupancy is <i>relational</i> (a ticket references the spot), not intrinsic. Flag-on-spot is also defensible.</td></tr>
+      <tr><td>activeTickets: List or Map?</td><td><code>Map&lt;String,Ticket&gt;</code></td><td>Makes "lookup by ID" explicit. Perf difference is irrelevant at this scale.</td></tr>
+      <tr><td>Where is the fee computed?</td><td><code>ParkingLot.computeFee()</code></td><td>Not on Ticket (it's data). A <code>PricingStrategy</code> is the "great" answer once pricing varies.</td></tr>
+      <tr><td>Ticket → Spot reference?</td><td>Store <code>spotId</code> only</td><td>Tickets are records, not navigational objects (Law of Demeter).</td></tr>
+      <tr><td>Money type</td><td><code>long</code> cents</td><td>Never <code>double</code> for money.</td></tr>
+      <tr><td>Double exit</td><td>Remove ticket on exit</td><td>A reused ID is simply "not found". Same error for invalid and used.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Flows</h2>
+<div class="flow">enter(vehicleType)
+  spot = findAvailableSpot(type)     → null? throw NoSpotAvailable (no state changed)
+  occupiedSpotIds.add(spot.id)
+  ticket = new Ticket(uuid, spot.id, type, now)
+  activeTickets.put(ticket.id, ticket) → return ticket
+
+exit(ticketId)
+  ticket = activeTickets.get(id)     → null? throw InvalidTicket
+  fee = ceil(hours(now - entry)) * rate
+  occupiedSpotIds.remove(ticket.spotId)
+  activeTickets.remove(id)           → return fee</div>
+</section>
+
+<section>
+  <h2>Java: baseline (as in the article)</h2>
+  <p>Matches the article's design. <code>synchronized</code> is the simple, correct answer for multiple entrances.</p>
+
+  <div class="code"><div class="bar"><span>Types.java</span><button type="button" data-copy>Copy</button></div><pre><span class="k">public enum</span> VehicleType { MOTORCYCLE, CAR, LARGE }
+<span class="k">public enum</span> SpotType    { MOTORCYCLE, CAR, LARGE }
+
+<span class="k">public final class</span> ParkingSpot {
+    <span class="k">private final</span> String id;
+    <span class="k">private final</span> SpotType spotType;
+
+    <span class="k">public</span> ParkingSpot(String id, SpotType spotType) {
+        <span class="k">this</span>.id = Objects.requireNonNull(id);
+        <span class="k">this</span>.spotType = Objects.requireNonNull(spotType);
+    }
+    <span class="k">public</span> String getId()           { <span class="k">return</span> id; }
+    <span class="k">public</span> SpotType getSpotType()   { <span class="k">return</span> spotType; }
+}
+
+<span class="c">// Java 16+ record: immutable, getters/equals/hashCode for free</span>
+<span class="k">public record</span> Ticket(String id, String spotId, VehicleType vehicleType, Instant entryTime) {}
+
+<span class="k">public class</span> NoSpotAvailableException <span class="k">extends</span> RuntimeException {
+    <span class="k">public</span> NoSpotAvailableException(VehicleType t) { <span class="k">super</span>(<span class="s">"No available spot for "</span> + t); }
+}
+<span class="k">public class</span> InvalidTicketException <span class="k">extends</span> RuntimeException {
+    <span class="k">public</span> InvalidTicketException(String id) { <span class="k">super</span>(<span class="s">"Ticket not found or already used: "</span> + id); }
+}</pre></div>
+
+  <div class="code"><div class="bar"><span>ParkingLot.java</span><button type="button" data-copy>Copy</button></div><pre><span class="k">public class</span> ParkingLot {
+    <span class="k">private static final long</span> MILLIS_PER_HOUR = 3_600_000L;
+
+    <span class="k">private final</span> List&lt;ParkingSpot&gt; spots;
+    <span class="k">private final</span> Set&lt;String&gt; occupiedSpotIds = <span class="k">new</span> HashSet&lt;&gt;();
+    <span class="k">private final</span> Map&lt;String, Ticket&gt; activeTickets = <span class="k">new</span> HashMap&lt;&gt;();
+    <span class="k">private final long</span> hourlyRateCents;
+    <span class="k">private final</span> Clock clock;   <span class="c">// injected so tests can control time</span>
+
+    <span class="k">public</span> ParkingLot(List&lt;ParkingSpot&gt; spots, <span class="k">long</span> hourlyRateCents, Clock clock) {
+        <span class="k">this</span>.spots = List.copyOf(spots);
+        <span class="k">this</span>.hourlyRateCents = hourlyRateCents;
+        <span class="k">this</span>.clock = clock;
+    }
+
+    <span class="k">public synchronized</span> Ticket enter(VehicleType vehicleType) {
+        ParkingSpot spot = findAvailableSpot(vehicleType);
+        <span class="k">if</span> (spot == <span class="k">null</span>) <span class="k">throw new</span> NoSpotAvailableException(vehicleType);
+
+        occupiedSpotIds.add(spot.getId());
+        Ticket ticket = <span class="k">new</span> Ticket(UUID.randomUUID().toString(), spot.getId(),
+                                   vehicleType, clock.instant());
+        activeTickets.put(ticket.id(), ticket);
+        <span class="k">return</span> ticket;
+    }
+
+    <span class="k">public synchronized long</span> exit(String ticketId) {
+        <span class="k">if</span> (ticketId == <span class="k">null</span> || ticketId.isBlank()) <span class="k">throw new</span> InvalidTicketException(ticketId);
+
+        Ticket ticket = activeTickets.get(ticketId);
+        <span class="k">if</span> (ticket == <span class="k">null</span>) <span class="k">throw new</span> InvalidTicketException(ticketId);
+
+        <span class="k">long</span> fee = computeFee(ticket.entryTime(), clock.instant());
+        occupiedSpotIds.remove(ticket.spotId());
+        activeTickets.remove(ticketId);
+        <span class="k">return</span> fee;
+    }
+
+    <span class="k">private</span> ParkingSpot findAvailableSpot(VehicleType vt) {
+        SpotType required = toSpotType(vt);
+        <span class="k">for</span> (ParkingSpot s : spots) {
+            <span class="k">if</span> (s.getSpotType() == required &amp;&amp; !occupiedSpotIds.contains(s.getId())) <span class="k">return</span> s;
+        }
+        <span class="k">return null</span>;
+    }
+
+    <span class="k">private static</span> SpotType toSpotType(VehicleType vt) {
+        <span class="k">return switch</span> (vt) {
+            <span class="k">case</span> MOTORCYCLE -&gt; SpotType.MOTORCYCLE;
+            <span class="k">case</span> CAR        -&gt; SpotType.CAR;
+            <span class="k">case</span> LARGE      -&gt; SpotType.LARGE;
+        };
+    }
+
+    <span class="k">private long</span> computeFee(Instant entry, Instant exit) {
+        <span class="k">long</span> ms = Duration.between(entry, exit).toMillis();
+        <span class="k">long</span> hours = (ms + MILLIS_PER_HOUR - 1) / MILLIS_PER_HOUR;  <span class="c">// ceil</span>
+        <span class="k">return</span> Math.max(1, hours) * hourlyRateCents;               <span class="c">// min 1 hour</span>
+    }
+}</pre></div>
+</section>
+
+<section>
+  <h2>Java: my improved version</h2>
+  <p>Same public API, but O(1) allocation, lock-free concurrency, and pluggable pricing. Good to present as the "senior" evolution after the baseline works.</p>
+  <ul>
+    <li><b>Free-spot pool per type</b>: <code>EnumMap&lt;SpotType, Queue&lt;ParkingSpot&gt;&gt;</code>. <code>poll()</code> claims a spot atomically, so two entrances can never get the same spot.</li>
+    <li><b><code>ConcurrentHashMap.remove(id)</code></b> on exit is atomic, so a double exit from two gates fails cleanly.</li>
+    <li><b><code>PricingStrategy</code></b> absorbs per-vehicle rates, weekend pricing, etc. without touching <code>ParkingLot</code>.</li>
+  </ul>
+
+  <div class="code"><div class="bar"><span>Pricing.java</span><button type="button" data-copy>Copy</button></div><pre><span class="k">public interface</span> PricingStrategy {
+    <span class="k">long</span> feeCents(Ticket ticket, Instant exitTime);
+}
+
+<span class="k">public final class</span> HourlyPricing <span class="k">implements</span> PricingStrategy {
+    <span class="k">private static final long</span> MILLIS_PER_HOUR = 3_600_000L;
+    <span class="k">private final</span> Map&lt;VehicleType, Long&gt; ratesCents;
+
+    <span class="k">public</span> HourlyPricing(Map&lt;VehicleType, Long&gt; ratesCents) {
+        <span class="k">this</span>.ratesCents = Map.copyOf(ratesCents);
+    }
+    <span class="k">public static</span> HourlyPricing flat(<span class="k">long</span> rateCents) {     <span class="c">// base requirement</span>
+        Map&lt;VehicleType, Long&gt; m = <span class="k">new</span> EnumMap&lt;&gt;(VehicleType.<span class="k">class</span>);
+        <span class="k">for</span> (VehicleType v : VehicleType.values()) m.put(v, rateCents);
+        <span class="k">return new</span> HourlyPricing(m);
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">public long</span> feeCents(Ticket t, Instant exitTime) {
+        <span class="k">long</span> ms = Duration.between(t.entryTime(), exitTime).toMillis();
+        <span class="k">long</span> hours = Math.max(1, (ms + MILLIS_PER_HOUR - 1) / MILLIS_PER_HOUR);
+        <span class="k">return</span> hours * ratesCents.get(t.vehicleType());
+    }
+}</pre></div>
+
+  <div class="code"><div class="bar"><span>ConcurrentParkingLot.java</span><button type="button" data-copy>Copy</button></div><pre><span class="k">public class</span> ConcurrentParkingLot {
+    <span class="k">private final</span> Map&lt;SpotType, Queue&lt;ParkingSpot&gt;&gt; freeSpots = <span class="k">new</span> EnumMap&lt;&gt;(SpotType.<span class="k">class</span>);
+    <span class="k">private final</span> Map&lt;String, ParkingSpot&gt; spotsById = <span class="k">new</span> HashMap&lt;&gt;();     <span class="c">// read-only after ctor</span>
+    <span class="k">private final</span> Map&lt;String, Ticket&gt; activeTickets = <span class="k">new</span> ConcurrentHashMap&lt;&gt;();
+    <span class="k">private final</span> PricingStrategy pricing;
+    <span class="k">private final</span> Clock clock;
+
+    <span class="k">public</span> ConcurrentParkingLot(List&lt;ParkingSpot&gt; spots, PricingStrategy pricing, Clock clock) {
+        <span class="k">this</span>.pricing = pricing;
+        <span class="k">this</span>.clock = clock;
+        <span class="k">for</span> (SpotType t : SpotType.values()) freeSpots.put(t, <span class="k">new</span> ConcurrentLinkedQueue&lt;&gt;());
+        <span class="k">for</span> (ParkingSpot s : spots) {
+            spotsById.put(s.getId(), s);
+            freeSpots.get(s.getSpotType()).offer(s);
+        }
+    }
+
+    <span class="k">public</span> Ticket enter(VehicleType vt) {
+        ParkingSpot spot = freeSpots.get(toSpotType(vt)).poll();   <span class="c">// atomic claim, O(1)</span>
+        <span class="k">if</span> (spot == <span class="k">null</span>) <span class="k">throw new</span> NoSpotAvailableException(vt);
+
+        Ticket t = <span class="k">new</span> Ticket(UUID.randomUUID().toString(), spot.getId(), vt, clock.instant());
+        activeTickets.put(t.id(), t);
+        <span class="k">return</span> t;
+    }
+
+    <span class="k">public long</span> exit(String ticketId) {
+        <span class="k">if</span> (ticketId == <span class="k">null</span> || ticketId.isBlank()) <span class="k">throw new</span> InvalidTicketException(ticketId);
+
+        Ticket t = activeTickets.remove(ticketId);                <span class="c">// atomic: 2nd exit sees null</span>
+        <span class="k">if</span> (t == <span class="k">null</span>) <span class="k">throw new</span> InvalidTicketException(ticketId);
+
+        <span class="k">long</span> fee = pricing.feeCents(t, clock.instant());
+        ParkingSpot spot = spotsById.get(t.spotId());
+        freeSpots.get(spot.getSpotType()).offer(spot);           <span class="c">// return to pool</span>
+        <span class="k">return</span> fee;
+    }
+
+    <span class="k">private static</span> SpotType toSpotType(VehicleType vt) {
+        <span class="k">return switch</span> (vt) {
+            <span class="k">case</span> MOTORCYCLE -&gt; SpotType.MOTORCYCLE;
+            <span class="k">case</span> CAR        -&gt; SpotType.CAR;
+            <span class="k">case</span> LARGE      -&gt; SpotType.LARGE;
+        };
+    }
+}</pre></div>
+
+  <div class="code"><div class="bar"><span>Demo.java (trace from the article)</span><button type="button" data-copy>Copy</button></div><pre><span class="k">public static void</span> main(String[] args) {
+    Instant t0 = Instant.parse(<span class="s">"2026-01-01T10:00:00Z"</span>);
+    MutableClock clock = <span class="k">new</span> MutableClock(t0);   <span class="c">// tiny Clock subclass with advance(Duration)</span>
+
+    <span class="k">var</span> lot = <span class="k">new</span> ConcurrentParkingLot(List.of(
+            <span class="k">new</span> ParkingSpot(<span class="s">"A"</span>, SpotType.MOTORCYCLE),
+            <span class="k">new</span> ParkingSpot(<span class="s">"B"</span>, SpotType.CAR),
+            <span class="k">new</span> ParkingSpot(<span class="s">"C"</span>, SpotType.LARGE)),
+        HourlyPricing.flat(500), clock);
+
+    Ticket t = lot.enter(VehicleType.CAR);            <span class="c">// gets spot B</span>
+    clock.advance(Duration.ofMinutes(150));           <span class="c">// 2.5 h</span>
+    System.out.println(lot.exit(t.id()));             <span class="c">// 1500 (3 h × 500)</span>
+
+    lot.enter(VehicleType.CAR);
+    <span class="k">try</span> { lot.enter(VehicleType.CAR); }             <span class="c">// lot full for cars</span>
+    <span class="k">catch</span> (NoSpotAvailableException e) { System.out.println(e.getMessage()); }
+    <span class="k">try</span> { lot.exit(t.id()); }                         <span class="c">// double exit</span>
+    <span class="k">catch</span> (InvalidTicketException e) { System.out.println(e.getMessage()); }
+}</pre></div>
+</section>
+
+<section>
+  <h2>Extensions (talk, don't build)</h2>
+  <div class="grid2">
+    <div class="box"><h3>Multi-floor</h3><p>Add <code>ParkingFloor</code> (floorNo, spots) between lot and spot. Spot IDs like <code>3-A15</code>. Ticket and exit unchanged. Allocation via a <code>SpotAllocationStrategy</code>: lowest floor first, balance by free count, or nearest to destination.</p></div>
+    <div class="box"><h3>Per-type pricing</h3><p>Simple: <code>Map&lt;VehicleType, Long&gt;</code> of rates. Reach for <code>PricingStrategy</code> only for surge, discounts, daily caps.</p></div>
+    <div class="box"><h3>Concurrent entrances</h3><p><span class="tag good">Good</span> <code>synchronized enter/exit</code>, fine for 3–5 gates. <span class="tag sign">Great</span> atomic check-and-claim (<code>Set.add</code> returns false → retry) or per-type free queues as above. Across processes: DB <code>SELECT … FOR UPDATE</code> or a distributed lock.</p></div>
+    <div class="box"><h3>Spot compatibility</h3><p>"Motorcycle may use a car spot if motorcycle spots are full": replace the 1:1 switch with an ordered fallback list, e.g. <code>MOTORCYCLE → [MOTORCYCLE, CAR, LARGE]</code>. This is why the two enums are separate.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>My suggestions</h2>
+  <ol>
+    <li><b>Inject a <code>Clock</code></b> instead of calling <code>System.currentTimeMillis()</code>. It makes fee logic testable and is an easy senior signal in Java interviews.</li>
+    <li><b>Watch the 0-minute edge case.</b> The article's <code>computeFee</code> returns 0 if exit time equals entry time, though the text says "minimum 1 hour". Use <code>Math.max(1, hours)</code> and say it out loud.</li>
+    <li><b>Use a <code>record</code> for Ticket</b> and <code>Instant</code>/<code>Duration</code> instead of raw <code>long</code> millis. Mention long-cents for money before the interviewer does.</li>
+    <li><b>Throw typed exceptions</b> (<code>NoSpotAvailableException</code>, <code>InvalidTicketException</code>) rather than returning null or a generic <code>Exception</code>.</li>
+    <li><b>Order of state changes matters.</b> In <code>enter</code>, validate before mutating; in <code>exit</code>, remove the ticket first (atomically) so a concurrent second exit can't double-free the spot.</li>
+    <li><b>Start with the baseline, then evolve.</b> Present the linear scan + <code>synchronized</code> first, then offer the free-queue version when asked about scale or concurrency. Don't open with patterns nobody asked for.</li>
+    <li><b>Don't add <code>getAvailableSpots()</code></b> or display-board methods unless asked. If asked, add a read-only count per type (an <code>AtomicInteger</code> or the queue size).</li>
+  </ol>
+  <div class="tip"><b>Time plan (~45 min):</b> 5 requirements · 5 entities · 10 class design · 15 implementation · 5 trace / verify · 5 extensions.</div>
+</section>
+
+<section>
+  <h2>Level expectations</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Level</th><th>Bar</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag">Junior</span></td><td>Working enter/exit, basic errors (full lot, invalid ticket). Hints on pricing placement are OK.</td></tr>
+      <tr><td><span class="tag sign">Mid</span></td><td>Clean separation, Vehicle as enum, double-exit handled, can justify Map and pricing placement, one extension.</td></tr>
+      <tr><td><span class="tag warn">Senior</span></td><td>Proactive trade-offs (occupancy placement, separate enums), catches edge cases unprompted, simple-first then Strategy, multi-floor and concurrency.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>Source: <a href="https://www.hellointerview.com/learn/low-level-design/problem-breakdowns/parking-lot" target="_blank" rel="noopener">Hello Interview: Parking Lot Low Level Design</a> (Evan King). Notes summarized; Java code and suggestions are my own additions.</footer>
+</main>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var pre = btn.closest('.code').querySelector('pre');
+    var text = pre.innerText;
+    var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+    var fallback = function(){ var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected'; };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch(e){ fallback(); }
+  });
+});
+</script>
+</body>
+</html>
